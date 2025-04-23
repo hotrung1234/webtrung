@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ĐTDĐ Phúc Hưng - Nhập sản phẩm</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 500px;
+      margin: auto;
+      padding: 16px;
+      background: #f2f2f2;
+    }
+    h1, h2 {
+      text-align: center;
+      margin-top: 10px;
+    }
+    input, select, textarea, button {
+      width: 100%;
+      padding: 10px;
+      margin: 6px 0;
+      font-size: 1rem;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background-color: #28a745;
+      color: white;
+      border: none;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    .hidden {
+      display: none;
+    }
+    .product-list {
+      margin-top: 20px;
+    }
+    .product {
+      background: #fff;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .product img {
+      width: 80px;
+      height: 80px;
+      object-fit: cover;
+      border-radius: 6px;
+    }
+    .product-info {
+      flex: 1;
+    }
+    .product-info h3 {
+      margin: 0 0 4px;
+      font-size: 1.1rem;
+      color: #333;
+    }
+    .product-info p {
+      margin: 2px 0;
+      font-size: 0.9rem;
+      color: #555;
+    }
+    .actions {
+      margin-top: 8px;
+    }
+    .btn-small {
+      font-size: 0.8rem;
+      padding: 5px 10px;
+      margin-right: 6px;
+      border: none;
+      border-radius: 5px;
+    }
+    .btn-edit {
+      background-color: #ffc107;
+      color: #000;
+    }
+    .btn-delete {
+      background-color: #dc3545;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <h1>ĐTDĐ Phúc Hưng</h1>
+
+  <div id="login-section">
+    <input type="password" id="password" placeholder="Nhập mật khẩu để tiếp tục" />
+    <button onclick="login()">Đăng nhập</button>
+  </div>
+
+  <div id="form-section" class="hidden">
+    <h2>Nhập sản phẩm</h2>
+    <select id="type">
+      <option>Điện thoại</option>
+      <option>Camera</option>
+      <option>Phụ kiện</option>
+    </select>
+    <input type="text" id="name" placeholder="Tên sản phẩm" />
+    <input type="number" id="price" placeholder="Giá sản phẩm" />
+    <input type="text" id="image" placeholder="Link hình ảnh (URL)" />
+    <textarea id="description" placeholder="Mô tả sản phẩm"></textarea>
+    <input type="number" id="quantity" placeholder="Số lượng" />
+    <textarea id="note" placeholder="Ghi chú thêm"></textarea>
+    <button onclick="submitProduct()">Lưu sản phẩm</button>
+
+    <h2>Danh sách sản phẩm</h2>
+    <div id="product-list" class="product-list"></div>
+  </div>
+
+  <script>
+    const PASSWORD = "123";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzIi3mmT3vXMnZ2_u1_UMKwxWfoC275FlXq4ikAArrTOcFiCNoeNLiannu4hRe25qyf/exec"; // <-- Đổi chỗ này!
+
+    let editingIndex = -1;
+
+    function login() {
+      const pw = document.getElementById("password").value;
+      if (pw === PASSWORD) {
+        document.getElementById("login-section").classList.add("hidden");
+        document.getElementById("form-section").classList.remove("hidden");
+        loadProducts();
+      } else {
+        alert("Sai mật khẩu!");
+      }
+    }
+
+    function submitProduct() {
+      const data = {
+        action: editingIndex === -1 ? "add" : "edit",
+        type: document.getElementById("type").value,
+        name: document.getElementById("name").value.trim(),
+        price: document.getElementById("price").value.trim(),
+        image: document.getElementById("image").value.trim(),
+        description: document.getElementById("description").value.trim(),
+        quantity: document.getElementById("quantity").value.trim(),
+        note: document.getElementById("note").value.trim(),
+        rowIndex: editingIndex
+      };
+
+      fetch(SCRIPT_URL, {
+        method: "POST",
+        body: JSON.stringify(data),
+      })
+        .then(res => res.text())
+        .then(() => {
+          resetForm();
+          loadProducts();
+        })
+        .catch(err => alert("Lỗi: " + err));
+    }
+
+    function loadProducts() {
+      fetch(SCRIPT_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: "get" }),
+      })
+        .then(res => res.json())
+        .then(products => {
+          const list = document.getElementById("product-list");
+          list.innerHTML = "";
+          products.reverse().forEach((item, index) => {
+            const realIndex = products.length - 1 - index; // để xoá đúng dòng
+            const div = document.createElement("div");
+            div.className = "product";
+            div.innerHTML = `
+              <img src="${item[4]}" alt="Ảnh" />
+              <div class="product-info">
+                <h3>${item[2]}</h3>
+                <p><strong>Loại:</strong> ${item[1]} | <strong>Giá:</strong> ${parseFloat(item[3]).toLocaleString("vi-VN")} đ</p>
+                <p><strong>Mô tả:</strong> ${item[5]}</p>
+                <p><strong>Số lượng:</strong> ${item[6]}</p>
+                <p><strong>Ghi chú:</strong> ${item[7]}</p>
+                <div class="actions">
+                  <button class="btn-small btn-edit" onclick='editProduct(${realIndex}, ${JSON.stringify(item).replace(/"/g, "&quot;")})'>Sửa</button>
+                  <button class="btn-small btn-delete" onclick="deleteProduct(${realIndex})">Xoá</button>
+                </div>
+              </div>
+            `;
+            list.appendChild(div);
+          });
+        });
+    }
+
+    function editProduct(index, item) {
+      editingIndex = index;
+      document.getElementById("type").value = item[1];
+      document.getElementById("name").value = item[2];
+      document.getElementById("price").value = item[3];
+      document.getElementById("image").value = item[4];
+      document.getElementById("description").value = item[5];
+      document.getElementById("quantity").value = item[6];
+      document.getElementById("note").value = item[7];
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function deleteProduct(index) {
+      if (!confirm("Bạn có chắc muốn xoá sản phẩm này không?")) return;
+      fetch(SCRIPT_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: "delete", rowIndex: index }),
+      })
+        .then(res => res.text())
+        .then(() => loadProducts())
+        .catch(err => alert("Lỗi: " + err));
+    }
+
+    function resetForm() {
+      editingIndex = -1;
+      ["type", "name", "price", "image", "description", "quantity", "note"].forEach(id => {
+        document.getElementById(id).value = "";
+      });
+    }
+  </script>
+
+    <div class="nav">
+    <a href="index.html">🔐 Trang xem hàng</a>
+  </div>
+</body>
+</html>
